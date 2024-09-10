@@ -5,6 +5,8 @@ import { ref, shallowRef } from 'vue';
 import { parse, stringify } from "nbtify";
 import { LanguageProvider, ThemeProvider } from 'monaco-textmate-provider';
 
+import githubLogo from './assets/github.png'
+
 
 const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneDiffEditorConstructionOptions = {
   automaticLayout: true,
@@ -186,6 +188,9 @@ function escapeCode() {
 
 <template>
   <div class="flex flex-col h-full max-h-full">
+    <a class="absolute top-0 right-0 m-6" href="https://github.com/GoryMoon/snbt-editor">
+      <img height="40" width="40" :src="githubLogo" alt="Github logo">
+    </a>
     <div class="p-5 flex grow-0 shrink justify-center">
       <button class="btn mx-5" @click="unescapeCode">Unescape and Format</button>
       <button class="btn mx-5" @click="formatCode">Format SNBT</button>
