@@ -10,7 +10,7 @@ import githubLogo from './assets/github.png'
 import { slashEscape, slashUnescape } from './utils';
 
 
-const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneDiffEditorConstructionOptions = {
+const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneEditorConstructionOptions = {
   automaticLayout: true,
   formatOnType: true,
   formatOnPaste: true,
@@ -22,6 +22,9 @@ const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneDiffEditorConstructi
   },
   padding: {
     top: 5
+  },
+  bracketPairColorization: {
+    enabled: true
   }
 }
 
