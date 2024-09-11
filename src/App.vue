@@ -72,7 +72,7 @@ const debouncedChange = debounce((data: string) => {
         const preData = data.substring(0, parseInt(match[2]))
         const row = preData.split('\n').length
         const col = parseInt(match[2]) - preData.substring(0, preData.lastIndexOf('\n')).length + 1
-        setError(`Unexpected \`${match[1]}\` at (${row}:${col})`)
+        setError(`Unexpected <span class="bg-base-300 py-1 px-2 rounded text-sm">${match[1]}</span> at (${row}:${col})`)
 
         monacoRef.value.editor.setModelMarkers(model, 'owner', [
           {
@@ -80,7 +80,7 @@ const debouncedChange = debounce((data: string) => {
             startColumn: col,
             endLineNumber: row,
             endColumn: col,
-            message: `Unexpected \`${match[1]}\``,
+            message: `Unexpected: ${match[1]}`,
             severity: monacoRef.value.MarkerSeverity.Error
           }
         ])
@@ -283,7 +283,7 @@ function escapeCode() {
       </span>
     </div>
     <div class="my-5 text-white" v-if="error.length > 0">
-      <span class="mb-5 ml-5">{{ error }}<br /></span>
+      <span class="mb-5 ml-5" v-html="error"></span>
     </div>
   </div>
 </template>
