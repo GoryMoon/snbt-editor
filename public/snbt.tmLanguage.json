@@ -1,12 +1,16 @@
 {
     "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
     "name": "S-NBT",
-    "patterns": [{
-        "include": "#value"
-    }],
+    "scopeName": "source.snbt",
+    "patterns": [
+        {
+            "include": "#value"
+        }
+    ],
     "repository": {
         "value": {
-            "patterns": [{
+            "patterns": [
+                {
                     "include": "#byte"
                 },
                 {
@@ -45,27 +49,27 @@
             ]
         },
         "byte": {
-            "name": "constant.numeric",
+            "name": "constant.numeric.snbt",
             "match": "-?[0-9]+[Bb]"
         },
         "short": {
-            "name": "constant.numeric",
+            "name": "constant.numeric.snbt",
             "match": "-?[0-9]+[Ss]"
         },
         "int": {
-            "name": "constant.numeric",
+            "name": "constant.numeric.snbt",
             "match": "-?[0-9]+"
         },
         "long": {
-            "name": "constant.numeric",
+            "name": "constant.numeric.snbt",
             "match": "-?[0-9]+[Ll]"
         },
         "float": {
-            "name": "constant.numeric",
+            "name": "constant.numeric.snbt",
             "match": "-?[0-9]\\.[0-9]+[Ff]"
         },
         "double": {
-            "name": "constant.numeric",
+            "name": "constant.numeric.snbt",
             "match": "-?[0-9]\\.[0-9]+[Dd]"
         },
         "bytearray": {
@@ -82,7 +86,8 @@
                 }
             },
             "name": "meta.structure.array.bytearray.snbt",
-            "patterns": [{
+            "patterns": [
+                {
                     "include": "#byte"
                 },
                 {
@@ -109,7 +114,8 @@
                 }
             },
             "name": "meta.structure.array.intarray.snbt",
-            "patterns": [{
+            "patterns": [
+                {
                     "include": "#int"
                 },
                 {
@@ -136,7 +142,8 @@
                 }
             },
             "name": "meta.structure.array.longarray.snbt",
-            "patterns": [{
+            "patterns": [
+                {
                     "include": "#long"
                 },
                 {
@@ -163,7 +170,8 @@
                 }
             },
             "name": "meta.structure.array.list.snbt",
-            "patterns": [{
+            "patterns": [
+                {
                     "include": "#value"
                 },
                 {
@@ -180,7 +188,8 @@
             "name": "meta.structure.dictionary.snbt",
             "begin": "\\{",
             "end": "\\}",
-            "patterns": [{
+            "patterns": [
+                {
                     "include": "#compoundkey"
                 },
                 {
@@ -196,7 +205,8 @@
                             "name": "punctuation.separator.dictionary.pair.snbt"
                         }
                     },
-                    "patterns": [{
+                    "patterns": [
+                        {
                             "include": "#value"
                         },
                         {
@@ -208,7 +218,8 @@
         },
         "string": {
             "name": "string.snbt",
-            "patterns": [{
+            "patterns": [
+                {
                     "include": "#unquotedstring"
                 },
                 {
@@ -237,10 +248,12 @@
                 }
             },
             "name": "string.quoted.single.snbt",
-            "patterns": [{
-                "name": "constant.character.escape.json",
-                "match": "\\\\(?:['\\\\/bfnrt])"
-            }]
+            "patterns": [
+                {
+                    "name": "constant.character.escape.json",
+                    "match": "\\\\(?:['\\\\/bfnrt])"
+                }
+            ]
         },
         "doublequotedstring": {
             "begin": "\"",
@@ -256,13 +269,16 @@
                 }
             },
             "name": "string.quoted.double.snbt",
-            "patterns": [{
-                "name": "constant.character.escape.json",
-                "match": "\\\\(?:[\"\\\\/bfnrt])"
-            }]
+            "patterns": [
+                {
+                    "name": "constant.character.escape.json",
+                    "match": "\\\\(?:[\"\\\\/bfnrt])"
+                }
+            ]
         },
         "compoundkey": {
-            "patterns": [{
+            "patterns": [
+                {
                     "name": "support.type.property-name.unquoted.snbt",
                     "match": "[_\\-.+0-9A-Za-z]"
                 },
@@ -280,10 +296,12 @@
                         }
                     },
                     "name": "support.type.property-name.singlequoted.snbt",
-                    "patterns": [{
-                        "name": "constant.character.escape.json",
-                        "match": "\\\\(?:['\\\\/bfnrt])"
-                    }]
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.json",
+                            "match": "\\\\(?:['\\\\/bfnrt])"
+                        }
+                    ]
                 },
                 {
                     "begin": "\"",
@@ -299,13 +317,14 @@
                         }
                     },
                     "name": "support.type.property-name.doublequoted.snbt",
-                    "patterns": [{
-                        "name": "constant.character.escape.json",
-                        "match": "\\\\(?:[\"\\\\/bfnrt])"
-                    }]
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.json",
+                            "match": "\\\\(?:[\"\\\\/bfnrt])"
+                        }
+                    ]
                 }
             ]
         }
-    },
-    "scopeName": "source.snbt"
+    }
 }

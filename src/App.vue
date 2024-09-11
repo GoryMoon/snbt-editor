@@ -8,15 +8,15 @@ import { LanguageProvider, ThemeProvider } from 'monaco-textmate-provider'
 
 import githubLogo from './assets/github.png'
 import { slashEscape, slashUnescape } from './utils';
-
+import { conf } from './languageConfig'
 
 const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneEditorConstructionOptions = {
+  autoIndent: 'advanced',
+  autoClosingBrackets: 'always',
+  autoClosingQuotes: 'always',
+  autoSurround: 'languageDefined',
   automaticLayout: true,
-  formatOnType: true,
-  formatOnPaste: true,
-  guides: {
-    bracketPairs: true,
-  },
+  fontLigatures: true,
   minimap: {
     enabled: false,
   },
@@ -96,17 +96,13 @@ const debouncedChange = debounce((data: string) => {
   monacoRef.value.editor.setModelMarkers(model, 'owner', [])
 }, { waitMs: 300 })
 
-const handleChange = (data: string) => debouncedChange.call(data)
-const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor) => {
+function handleChange(data: string) {
+  debouncedChange.call(data)
+}
 
+async function handleBeforeMount(monaco: typeof monacoEditor) {
   // Register language
-  monaco.languages.register({
-    id: 'snbt',
-    aliases: [
-      'S-NBT',
-      'snbt'
-    ]
-  })
+  monaco.languages.register({ id: 'snbt' })
 
   // Register language provider
   const languageProvider = new LanguageProvider({
@@ -116,7 +112,6 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
       snbt: {
         scopeName: 'source.snbt',
         tmLanguageFile: new URL('/snbt.tmLanguage.json', import.meta.url),
-        languageConfigurationFile: new URL('/snbt.languageConfig.json', import.meta.url),
       },
     },
   });
@@ -124,13 +119,17 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
   // Register theme
   const themeProvider = new ThemeProvider({
     monaco: monaco,
-    registry: await languageProvider.getRegistry(),
+    registry: (await languageProvider.getRegistry()),
     themeSources: {
-      default: new URL('/dark-plus-syntax-color-theme.json', import.meta.url)
+      default: new URL('/vs_dark_cpp.json', import.meta.url)
     }
   });
 
   await themeProvider.setTheme('default')
+  monaco.languages.setLanguageConfiguration('snbt', conf)
+}
+
+function handleMount(editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor) {
 
   // Register formatter
   monaco.languages.registerDocumentFormattingEditProvider('snbt', {
@@ -280,8 +279,14 @@ function escapeCode() {
       </div>
     </div>
     <div class="flex-auto min-h-0">
-      <VueMonacoEditor language="snbt" v-model:value="code" theme="vs-dark" :options="MONACO_EDITOR_OPTIONS"
-        @mount="handleMount" @change="handleChange" />
+      <VueMonacoEditor
+        language="snbt"
+        v-model:value="code"
+        theme="vs-dark"
+        :options="MONACO_EDITOR_OPTIONS"
+        @beforeMount="handleBeforeMount"
+        @mount="handleMount"
+        @change="handleChange" />
     </div>
     <div class="bg-base-200 w-full text-sm p-1 px-4 flex flex-row justify-between">
       <span>
