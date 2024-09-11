@@ -1,42 +1,44 @@
 <script setup lang="ts">
-import { VueMonacoEditor } from '@guolao/vue-monaco-editor';
-import monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
-import { ref, shallowRef } from 'vue';
-import { parse, stringify } from "nbtify";
-import { LanguageProvider, ThemeProvider } from 'monaco-textmate-provider';
+import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
+import monacoEditor from 'monaco-editor/esm/vs/editor/editor.api'
+import { ref, shallowRef } from 'vue'
+import { parse, stringify } from 'nbtify'
+import { debounce } from 'remeda';
+import { LanguageProvider, ThemeProvider } from 'monaco-textmate-provider'
 
 import githubLogo from './assets/github.png'
+import { slashEscape, slashUnescape } from './utils';
 
 
 const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneDiffEditorConstructionOptions = {
   automaticLayout: true,
   formatOnType: true,
   formatOnPaste: true,
+  guides: {
+    bracketPairs: true,
+  },
   minimap: {
     enabled: false,
+  },
+  padding: {
+    top: 5
   }
 }
 
-const code = ref("[{}]")
-const errors = ref<string[]>(["", "", "", ""])
+const code = ref("{}")
+const error = ref("")
+const cursorPos = ref("Ln 1, Col 1")
+const selectedAmount = ref("")
 
-function pushError(err: unknown) {
-  let toAdd: string = ''
-
+function setError(err: unknown) {
   if (typeof err === 'string')
-    toAdd = err
+    error.value = err
   else if (err instanceof Error)
-    toAdd = err.message
-
-  if (toAdd.length <= 0) return
-
-  if (errors.value.length >= 4) errors.value.pop()
-
-  errors.value.unshift(toAdd)
+    error.value = err.message
 }
 
 function clearErrors() {
-  errors.value = ["", "", "", ""]
+  error.value = ""
 }
 
 function formatString(input: string, minify: boolean) {
@@ -46,14 +48,55 @@ function formatString(input: string, minify: boolean) {
     clearErrors()
     return result
   } catch (e) {
-    pushError(e)
+    setError(e)
   }
   return false;
 }
 
+
+const monacoRef = shallowRef<typeof monacoEditor>()
 const editorRef = shallowRef<monacoEditor.editor.IStandaloneCodeEditor>()
+
+const debouncedChange = debounce((data: string) => {
+  if (monacoRef.value === undefined || editorRef.value === undefined) return
+
+  const model = editorRef.value.getModel()
+  if (model == null) return
+
+  try {
+    parse(data)
+  } catch (e) {
+    if (e instanceof Error) {
+      const match = e.message.match(/^Unexpected character (.+) at position (\d*)$/)
+      if (match !== null) {
+        const preData = data.substring(0, parseInt(match[2]))
+        const row = preData.split('\n').length
+        const col = parseInt(match[2]) - preData.substring(0, preData.lastIndexOf('\n')).length + 1
+        setError(`Unexpected \`${match[1]}\` at (${row}:${col})`)
+
+        monacoRef.value.editor.setModelMarkers(model, 'owner', [
+          {
+            startLineNumber: row,
+            startColumn: col,
+            endLineNumber: row,
+            endColumn: col,
+            message: `Unexpected \`${match[1]}\``,
+            severity: monacoRef.value.MarkerSeverity.Error
+          }
+        ])
+      }
+      return
+    }
+  }
+
+  clearErrors()
+  monacoRef.value.editor.setModelMarkers(model, 'owner', [])
+}, { waitMs: 300 })
+
+const handleChange = (data: string) => debouncedChange.call(data)
 const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor) => {
-  monaco.languages.register({ id: 'greyscript' });
+
+  // Register language
   monaco.languages.register({
     id: 'snbt',
     aliases: [
@@ -61,19 +104,12 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
       'snbt'
     ]
   })
+
+  // Register language provider
   const languageProvider = new LanguageProvider({
     monaco: monaco,
     wasm: new URL('https://unpkg.com/vscode-oniguruma@2.0.1/release/onig.wasm'),
     grammarSourceMap: {
-      greyscript: {
-        scopeName: 'source.src',
-        tmLanguageFile: new URL(
-          'https://unpkg.com/greyscript-textmate@1.0.6/dist/greyscript.tmLanguage.json'
-        ),
-        languageConfigurationFile: new URL(
-          'https://unpkg.com/greyscript-textmate@1.0.6/dist/greyscriptLanguageConfig.json'
-        )
-      },
       snbt: {
         scopeName: 'source.snbt',
         tmLanguageFile: new URL('/snbt.tmLanguage.json', import.meta.url),
@@ -82,6 +118,7 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
     },
   });
 
+  // Register theme
   const themeProvider = new ThemeProvider({
     monaco: monaco,
     registry: await languageProvider.getRegistry(),
@@ -92,6 +129,7 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
 
   await themeProvider.setTheme('default')
 
+  // Register formatter
   monaco.languages.registerDocumentFormattingEditProvider('snbt', {
     provideDocumentFormattingEdits(model, _options) {
       const res = formatString(model.getValue(), false)
@@ -120,24 +158,9 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
     },
   })
 
-  function slashEscape(contents: string) {
-    return contents
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n');
-  }
-
-  const replacements = new Map<string, string>([['\\\\', '\\'], ['\\n', '\n'], ['\\"', '"']]);
-
-  function slashUnescape(contents: string) {
-    return contents.replace(/\\(\\|n|")/g, function (replace): string {
-      return replacements.get(replace) ?? '';
-    });
-  }
-
   editor.addAction({
     id: 'editor.action.escapeString',
-    label: 'Escape string',
+    label: 'Minify and Escape',
     run(editor, ..._args) {
 
       const model = editor.getModel();
@@ -152,7 +175,7 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
 
   editor.addAction({
     id: 'editor.action.unescapeString',
-    label: 'Unescape string',
+    label: 'Unescape and Format',
     run(editor, ..._args) {
       const model = editor.getModel();
       if (model == null) return
@@ -165,7 +188,34 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
     },
   })
 
-  return (editorRef.value = editor);
+  editor.onDidChangeCursorPosition((event) => {
+    if (event.secondaryPositions.length > 0) {
+      cursorPos.value = `${event.secondaryPositions.length + 1} selections`
+    } else {
+      const pos = event.position
+      cursorPos.value = `Ln ${pos.lineNumber}, Col ${pos.column}`
+    }
+  })
+
+  editor.onDidChangeCursorSelection((event) => {
+    const model = editor.getModel()
+    if (model === null) return
+
+    const selectedCount = model.getValueInRange(event.selection).length
+
+    if (event.secondarySelections.length > 0) {
+      let count = event.secondarySelections.map((sel) => model.getValueInRange(sel).length).reduce((sum, a) => sum + a, 0)
+      count += selectedCount
+
+      selectedAmount.value = event.secondarySelections.length + 1 < count ? `(${count} characters selected)` : ''
+    } else if (!event.selection.isEmpty()) {
+      selectedAmount.value = `(${selectedCount} selected)`
+    } else {
+      selectedAmount.value = ''
+    }
+  })
+
+  return (editorRef.value = editor, monacoRef.value = monaco);
 }
 
 function formatCode() {
@@ -187,22 +237,53 @@ function escapeCode() {
 </script>
 
 <template>
-  <div class="flex flex-col h-full max-h-full">
-    <a class="absolute top-0 right-0 m-6" href="https://github.com/GoryMoon/snbt-editor">
-      <img height="40" width="40" :src="githubLogo" alt="Github logo">
-    </a>
-    <div class="p-5 flex grow-0 shrink justify-center">
-      <button class="btn mx-5" @click="unescapeCode">Unescape and Format</button>
-      <button class="btn mx-5" @click="formatCode">Format SNBT</button>
-      <button class="btn mx-5" @click="minifyCode">Minify SNBT</button>
-      <button class="btn mx-5" @click="escapeCode">Minfiy and Escape</button>
+  <div class="flex flex-col h-full max-h-screen">
+    <div class="navbar bg-base-100">
+      <div class="navbar-start">
+        <div class="dropdown">
+          <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
+            </svg>
+          </div>
+          <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-200 rounded-box z-[1] mt-3 w-52 p-2 shadow">
+            <li class="py-2"><a @click="unescapeCode">Unescape and Format</a></li>
+            <li class="py-2"><a @click="formatCode">Format SNBT</a></li>
+            <li class="py-2"><a @click="minifyCode">Minify SNBT</a></li>
+            <li class="py-2"><a @click="escapeCode">Minfiy and Escape</a></li>
+          </ul>
+        </div>
+        <span>SNBT Editor</span>
+      </div>
+      <div class="navbar-center hidden lg:flex">
+        <ul class="menu menu-horizontal px-1">
+          <li><a @click="unescapeCode">Unescape and Format</a></li>
+          <li><a @click="formatCode">Format SNBT</a></li>
+          <li><a @click="minifyCode">Minify SNBT</a></li>
+          <li><a @click="escapeCode">Minfiy and Escape</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end">
+        <a class="btn btn-ghost" href="https://github.com/GoryMoon/snbt-editor">
+          <img height="30" width="30" :src="githubLogo" alt="Github logo">
+        </a>
+      </div>
     </div>
-    <div class="flex-auto">
+    <div class="flex-auto min-h-0">
       <VueMonacoEditor language="snbt" v-model:value="code" theme="vs-dark" :options="MONACO_EDITOR_OPTIONS"
-        @mount="handleMount" />
+        @mount="handleMount" @change="handleChange" />
     </div>
-    <div class="m-5 flex-none text-white">
-      <span v-for="(error, index) in errors" :key="index">{{ error }}<br /></span>
+    <div class="bg-base-200 w-full text-sm p-1 px-4 flex flex-row justify-between">
+      <span>
+        Right-click or press <kbd class="kbd kbd-sm">F1</kbd> to show the Command Palette
+      </span>
+      <span>
+        {{ cursorPos }} {{ selectedAmount }}
+      </span>
+    </div>
+    <div class="my-5 text-white" v-if="error.length > 0">
+      <span class="mb-5 ml-5">{{ error }}<br /></span>
     </div>
   </div>
 </template>
