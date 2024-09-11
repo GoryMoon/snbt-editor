@@ -146,6 +146,8 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
   editor.addAction({
     id: 'editor.action.minfiyDocument',
     label: 'Minfiy sNBT',
+    contextMenuGroupId: '1_modification',
+    contextMenuOrder: 98,
     run(editor, ..._args) {
 
       const model = editor.getModel();
@@ -161,6 +163,8 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
   editor.addAction({
     id: 'editor.action.escapeString',
     label: 'Minify and Escape',
+    contextMenuGroupId: '1_modification',
+    contextMenuOrder: 99,
     run(editor, ..._args) {
 
       const model = editor.getModel();
@@ -176,6 +180,8 @@ const handleMount = async (editor: monacoEditor.editor.IStandaloneCodeEditor, mo
   editor.addAction({
     id: 'editor.action.unescapeString',
     label: 'Unescape and Format',
+    contextMenuGroupId: '1_modification',
+    contextMenuOrder: 97,
     run(editor, ..._args) {
       const model = editor.getModel();
       if (model == null) return
