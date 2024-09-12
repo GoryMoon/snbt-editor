@@ -1,6 +1,6 @@
 import { languages } from "monaco-editor";
 
-export const conf: languages.LanguageConfiguration = {
+export default <languages.LanguageConfiguration> {
     brackets: [
         ['{', '}'],
         ['[', ']']

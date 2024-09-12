@@ -4,11 +4,10 @@ import monacoEditor from 'monaco-editor/esm/vs/editor/editor.api'
 import { ref, shallowRef } from 'vue'
 import { parse, stringify } from 'nbtify'
 import { debounce } from 'remeda';
-import { LanguageProvider, ThemeProvider } from 'monaco-textmate-provider'
 
 import githubLogo from './assets/github.png'
 import { slashEscape, slashUnescape } from './utils';
-import { conf } from './languageConfig'
+import { SimpleLanguageProvider } from './lang/provider';
 
 const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneEditorConstructionOptions = {
   autoIndent: 'advanced',
@@ -17,6 +16,9 @@ const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneEditorConstructionOp
   autoSurround: 'languageDefined',
   automaticLayout: true,
   fontLigatures: true,
+  guides: {
+    bracketPairs: 'active'
+  },
   minimap: {
     enabled: false,
   },
@@ -33,12 +35,8 @@ const error = ref("")
 const cursorPos = ref("Ln 1, Col 1")
 const selectedAmount = ref("")
 
-function setError(err: unknown) {
-  if (typeof err === 'string')
-    error.value = err
-  else if (err instanceof Error)
-    error.value = err.message
-}
+const monacoRef = shallowRef<typeof monacoEditor>()
+const editorRef = shallowRef<monacoEditor.editor.IStandaloneCodeEditor>()
 
 function clearErrors() {
   error.value = ""
@@ -51,14 +49,40 @@ function formatString(input: string, minify: boolean) {
     clearErrors()
     return result
   } catch (e) {
-    setError(e)
+    if (typeof e === 'string')
+      error.value = e
+    else if (e instanceof Error && !formatError(input, e)) {
+      error.value = e.message
+    }
   }
   return false;
 }
 
+function formatError(data: string, e: Error) {
+  if (monacoRef.value === undefined || editorRef.value === undefined) return false
+  const model = editorRef.value.getModel()
+  if (model == null) return false
 
-const monacoRef = shallowRef<typeof monacoEditor>()
-const editorRef = shallowRef<monacoEditor.editor.IStandaloneCodeEditor>()
+  const match = e.message.match(/^Unexpected character (.+) at position (\d*)$/)
+  if (match !== null) {
+    const preData = data.substring(0, parseInt(match[2]))
+    const row = preData.split('\n').length
+    const col = parseInt(match[2]) - preData.substring(0, preData.lastIndexOf('\n')).length + 1
+    error.value = `Unexpected <span class="bg-base-300 py-1 px-2 rounded text-sm">${match[1]}</span> at (${row}:${col})`
+
+    monacoRef.value.editor.setModelMarkers(model, 'owner', [
+      {
+        startLineNumber: row,
+        startColumn: col,
+        endLineNumber: row,
+        endColumn: col,
+        message: `Unexpected: ${match[1]}`,
+        severity: monacoRef.value.MarkerSeverity.Error
+      }
+    ])
+  }
+  return true
+}
 
 const debouncedChange = debounce((data: string) => {
   if (monacoRef.value === undefined || editorRef.value === undefined) return
@@ -70,24 +94,7 @@ const debouncedChange = debounce((data: string) => {
     parse(data)
   } catch (e) {
     if (e instanceof Error) {
-      const match = e.message.match(/^Unexpected character (.+) at position (\d*)$/)
-      if (match !== null) {
-        const preData = data.substring(0, parseInt(match[2]))
-        const row = preData.split('\n').length
-        const col = parseInt(match[2]) - preData.substring(0, preData.lastIndexOf('\n')).length + 1
-        setError(`Unexpected <span class="bg-base-300 py-1 px-2 rounded text-sm">${match[1]}</span> at (${row}:${col})`)
-
-        monacoRef.value.editor.setModelMarkers(model, 'owner', [
-          {
-            startLineNumber: row,
-            startColumn: col,
-            endLineNumber: row,
-            endColumn: col,
-            message: `Unexpected: ${match[1]}`,
-            severity: monacoRef.value.MarkerSeverity.Error
-          }
-        ])
-      }
+      formatError(data, e)
       return
     }
   }
@@ -101,32 +108,9 @@ function handleChange(data: string) {
 }
 
 async function handleBeforeMount(monaco: typeof monacoEditor) {
-  // Register language
-  monaco.languages.register({ id: 'snbt' })
-
-  // Register language provider
-  const languageProvider = new LanguageProvider({
-    monaco: monaco,
-    wasm: new URL('https://unpkg.com/vscode-oniguruma@2.0.1/release/onig.wasm'),
-    grammarSourceMap: {
-      snbt: {
-        scopeName: 'source.snbt',
-        tmLanguageFile: new URL('/snbt.tmLanguage.json', import.meta.url),
-      },
-    },
-  });
-
-  // Register theme
-  const themeProvider = new ThemeProvider({
-    monaco: monaco,
-    registry: (await languageProvider.getRegistry()),
-    themeSources: {
-      default: new URL('/vs_dark_cpp.json', import.meta.url)
-    }
-  });
-
-  await themeProvider.setTheme('default')
-  monaco.languages.setLanguageConfiguration('snbt', conf)
+  const languageProvider = new SimpleLanguageProvider({ monaco })
+  await languageProvider.register()
+  languageProvider.injectCss()
 }
 
 function handleMount(editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: typeof monacoEditor) {
@@ -279,14 +263,8 @@ function escapeCode() {
       </div>
     </div>
     <div class="flex-auto min-h-0">
-      <VueMonacoEditor
-        language="snbt"
-        v-model:value="code"
-        theme="vs-dark"
-        :options="MONACO_EDITOR_OPTIONS"
-        @beforeMount="handleBeforeMount"
-        @mount="handleMount"
-        @change="handleChange" />
+      <VueMonacoEditor language="snbt" v-model:value="code" theme="vs-dark" :options="MONACO_EDITOR_OPTIONS"
+        @beforeMount="handleBeforeMount" @mount="handleMount" @change="handleChange" />
     </div>
     <div class="bg-base-200 w-full text-sm p-1 px-4 flex flex-row justify-between">
       <span>
