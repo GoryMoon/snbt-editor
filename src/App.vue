@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import monacoEditor from 'monaco-editor/esm/vs/editor/editor.api'
-import { ref, shallowRef } from 'vue'
+import { ref, shallowRef, useTemplateRef } from 'vue'
 import { parse, stringify } from 'nbtify'
 import { debounce } from 'remeda';
 
 import githubLogo from './assets/github.png'
 import { slashEscape, slashUnescape } from './utils';
 import { SimpleLanguageProvider } from './lang/provider';
+import Code from './component/Code.vue';
 
 const MONACO_EDITOR_OPTIONS: monacoEditor.editor.IStandaloneEditorConstructionOptions = {
   autoIndent: 'advanced',
@@ -34,6 +35,14 @@ const code = ref("{}")
 const error = ref("")
 const cursorPos = ref("Ln 1, Col 1")
 const selectedAmount = ref("")
+const menuItems = ref([
+  { name: 'Unescape and Format', action: unescapeCode },
+  { name: 'Format SNBT', action: formatCode },
+  { name: 'Minify SNBT', action: minifyCode },
+  { name: 'Minify and Escape', action: escapeCode },
+  { name: '?', action: showHelp }
+])
+const helpModalRef = useTemplateRef('help-modal')
 
 const monacoRef = shallowRef<typeof monacoEditor>()
 const editorRef = shallowRef<monacoEditor.editor.IStandaloneCodeEditor>()
@@ -80,8 +89,9 @@ function formatError(data: string, e: Error) {
         severity: monacoRef.value.MarkerSeverity.Error
       }
     ])
+    return true
   }
-  return true
+  return false
 }
 
 const debouncedChange = debounce((data: string) => {
@@ -131,7 +141,7 @@ function handleMount(editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: 
 
   editor.addAction({
     id: 'editor.action.minfiyDocument',
-    label: 'Minfiy sNBT',
+    label: 'Minfiy SNBT',
     contextMenuGroupId: '1_modification',
     contextMenuOrder: 98,
     run(editor, ..._args) {
@@ -226,6 +236,10 @@ function escapeCode() {
   editorRef.value?.trigger('editor', 'editor.action.escapeString', null)
 }
 
+function showHelp() {
+  helpModalRef.value?.showModal()
+}
+
 </script>
 
 <template>
@@ -240,24 +254,18 @@ function escapeCode() {
             </svg>
           </div>
           <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-200 rounded-box z-[1] mt-3 w-52 p-2 shadow">
-            <li class="py-2"><a @click="unescapeCode">Unescape and Format</a></li>
-            <li class="py-2"><a @click="formatCode">Format SNBT</a></li>
-            <li class="py-2"><a @click="minifyCode">Minify SNBT</a></li>
-            <li class="py-2"><a @click="escapeCode">Minfiy and Escape</a></li>
+            <li v-for="item in menuItems" class="py-2"><a @click="item.action">{{ item.name }}</a></li>
           </ul>
         </div>
         <span>SNBT Editor</span>
       </div>
       <div class="navbar-center hidden lg:flex">
         <ul class="menu menu-horizontal px-1">
-          <li><a @click="unescapeCode">Unescape and Format</a></li>
-          <li><a @click="formatCode">Format SNBT</a></li>
-          <li><a @click="minifyCode">Minify SNBT</a></li>
-          <li><a @click="escapeCode">Minfiy and Escape</a></li>
+          <li v-for="item in menuItems"><a @click="item.action">{{ item.name }}</a></li>
         </ul>
       </div>
       <div class="navbar-end">
-        <a class="btn btn-ghost" href="https://github.com/GoryMoon/snbt-editor">
+        <a class="btn btn-ghost" target="_blank" href="https://github.com/GoryMoon/snbt-editor">
           <img height="30" width="30" :src="githubLogo" alt="Github logo">
         </a>
       </div>
@@ -278,6 +286,56 @@ function escapeCode() {
       <span class="mb-5 ml-5" v-html="error"></span>
     </div>
   </div>
+  <dialog ref="help-modal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <h3 class="text-2xl font-bold">SNBT Editor Help</h3>
+      <p class="pt-4 px-2">
+        This tool helps for reading and editing <a class="link" target="_blank" href="https://minecraft.wiki/w/NBT_format#SNBT_format">SNBT</a> data. Either as an escaped string or raw data.<br>
+        Just past the string <Code>""</Code> or  data <Code>{}</Code>/<Code>[]</Code> directly into the editor and press on of the buttons to modify it.<br>
+      </p>
+      <p class="py-4 px-2">
+        This editor has a subset of features that <a class="link" target="_blank" href="https://code.visualstudio.com/">Visual Studio Code</a> has, this can be seen when using some features like the <b>Command Pallete</b>,
+        right-clicking, pressing <kbd class="kbd kbd-sm ">F1</kbd> or <kbd class="kbd kbd-sm">Ctrl + F</kbd><br>
+        The buttons at the top is also available as right-click actions.
+      </p>
+      <div class="divider my-0"></div>
+      <h4 class="font-bold">Unescape and Format</h4>
+      <p class="px-2 py-4">
+        Use this if your input data is a string, like: <Code>"{item:\"minecraft:stone\"}</Code><br>
+        This button first unescapes the string (removes the first and last <Code>"</Code> and all relevant <Code>\</Code>), it then formats the data so it's east to read and edit.
+      </p>
+      <div class="divider my-0"></div>
+      <h4 class="font-bold">Format</h4>
+      <p class="p-4">
+        Use this if your input data is unescaped, like: <Code>{item:"minecraft:stone"}</Code><br>
+        This button formats any valid SNBT string so it's east to read and edit.
+      </p>
+      <div class="divider my-0"></div>
+      <h4 class="font-bold">Minify</h4>
+      <p class="p-4">
+        This button just minifies the current data in the editor, this us useful when you to use it elsewhere, it often needs to be minified so it fits on one line.
+      </p>
+      <div class="divider my-0"></div>
+      <h4 class="font-bold">Minify and Escape</h4>
+      <p class="p-4">
+        This button does the same as the other minify button but in addition it also escapes all <Code>"</Code>, <Code>\</Code> and newlines, it also adds <Code>"</Code> at the start and end of the string.
+      </p>
+
+      <div class="divider my-0"></div>
+      <p>
+        This tool uses the <a class="link" target="_blank" href="https://github.com/Offroaders123/NBTify">NBTify</a> tool by <a class="link" target="_blank" href="https://github.com/Offroaders123">Offroaders123</a> to format and minify.<br>
+        Made by <a class="link" target="_blank" href="https://github.com/GoryMoon">GoryMoon</a>
+      </p>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
 </template>
 
-<style scoped></style>
+<style scoped>
+
+</style>
