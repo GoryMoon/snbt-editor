@@ -303,7 +303,7 @@ function showHelp() {
       </p>
       <div class="divider my-0"></div>
       <h4 class="font-bold">Unescape and Format</h4>
-      <p class="px-2 py-4">
+      <p class="p-4">
         Use this if your input data is a string, like: <Code>"{item:\"minecraft:stone\"}</Code><br>
         This button first unescapes the string (removes the first and last <Code>"</Code> and all relevant <Code>\</Code>), it then formats the data so it's east to read and edit.
       </p>
