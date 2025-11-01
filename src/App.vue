@@ -293,8 +293,8 @@ function showHelp() {
       </form>
       <h3 class="text-2xl font-bold">SNBT Editor Help</h3>
       <p class="pt-4 px-2">
-        This tool helps for reading and editing <a class="link" target="_blank" href="https://minecraft.wiki/w/NBT_format#SNBT_format">SNBT</a> data. Either as an escaped string or raw data.<br>
-        Just past the string <Code>""</Code> or  data <Code>{}</Code>/<Code>[]</Code> directly into the editor and press on of the buttons to modify it.<br>
+        This tool helps with reading and editing <a class="link" target="_blank" href="https://minecraft.wiki/w/NBT_format#SNBT_format">SNBT</a> data. Either as an escaped string or raw data.<br>
+        Just paste the string <Code>""</Code> or  data <Code>{}</Code>/<Code>[]</Code> directly into the editor and press one of the buttons to modify it.<br>
       </p>
       <p class="py-4 px-2">
         This editor has a subset of features that <a class="link" target="_blank" href="https://code.visualstudio.com/">Visual Studio Code</a> has, this can be seen when using some features like the <b>Command Pallete</b>,
@@ -305,18 +305,18 @@ function showHelp() {
       <h4 class="font-bold">Unescape and Format</h4>
       <p class="p-4">
         Use this if your input data is a string, like: <Code>"{item:\"minecraft:stone\"}</Code><br>
-        This button first unescapes the string (removes the first and last <Code>"</Code> and all relevant <Code>\</Code>), it then formats the data so it's east to read and edit.
+        This button first unescapes the string (removes the first and last <Code>"</Code> and all relevant <Code>\</Code>), it then formats the data so it's easy to read and edit.
       </p>
       <div class="divider my-0"></div>
       <h4 class="font-bold">Format</h4>
       <p class="p-4">
         Use this if your input data is unescaped, like: <Code>{item:"minecraft:stone"}</Code><br>
-        This button formats any valid SNBT string so it's east to read and edit.
+        This button formats any valid SNBT string so it's easy to read and edit.
       </p>
       <div class="divider my-0"></div>
       <h4 class="font-bold">Minify</h4>
       <p class="p-4">
-        This button just minifies the current data in the editor, this us useful when you to use it elsewhere, it often needs to be minified so it fits on one line.
+        This button just minifies the current data in the editor, this is useful when you want to use it elsewhere, it often needs to be minified so it fits on one line.
       </p>
       <div class="divider my-0"></div>
       <h4 class="font-bold">Minify and Escape</h4>
